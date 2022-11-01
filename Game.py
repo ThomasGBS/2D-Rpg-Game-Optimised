@@ -94,10 +94,14 @@ class Item(pygame.sprite.Sprite):
                 self.surf.fill((50, 50, 50), special_flags=pygame.BLEND_RGB_ADD) 
                 self.hover = True
         
-        #if hoverCheck(self) and pygame.mouse.get_pressed([0]) and invcheck and self.inv
+        # if hoverCheck(self) and pygame.mouse.get_pressed([0]) == True and invcheck and self.inv and not self.clicked and time.time() < wait - 1:
+        #     print("funker")
+        #     wait = time.time()
 
-        elif not hoverCheck(self):
+        elif not hoverCheck(self) and invcheck and self.inv:
             self.hover = False
+            self.surf = pygame.image.load(f"2D-Rpg-Game-Optimised/sprites/{self.type}.png").convert()
+            self.surf.set_colorkey((255,255,255))
 
 
 class Sword(Item):
@@ -110,6 +114,7 @@ class Sword(Item):
         self.pickup = Text("E", 25, (254,254,254), (self.rect.centerx + 10, self.rect.centery - 30), self)
         self.inv = False
         self.hover = False
+        self.clicked = False
     def Update(self, pressedKeys):
 
         super(Sword, self).Update(pressedKeys)
@@ -164,6 +169,8 @@ all_items = pygame.sprite.Group()
 all_sprites = pygame.sprite.Group()
 
 all_sprites.add(player)
+
+wait = time.time()
 
 while running:
     
