@@ -27,8 +27,25 @@ class Player(pygame.sprite.Sprite):
         self.surf.set_colorkey((255,255,255), RLEACCEL)
         self.rect = self.surf.get_rect()
         self.inventory = []
+        self.hand = None
+
 
     def update(self, pressed_keys):
+        global wait
+        if self.hand != None:
+            self.hand.rect = (player.rect.centerx + 10, player.rect.centery - 20)
+            if not self.hand in all_sprites:
+                all_sprites.add(self.hand)
+            if pygame.mouse.get_pressed()[0] and not invcheck and self.hand.rotation == 0 and time.time() > wait + 0.2 or self.hand.rotation > 0 and self.hand.rotation < 50:
+                print("working")
+                wait = time.time
+                self.hand.rotation += 5
+                self.hand.surf = pygame.transform.rotate(player.hand.surf, self.hand.rotation)
+            elif self.hand.rotation > 50:
+                self.hand.surf = pygame.transform.rotate(player.hand.surf, -self.hand.rotation)
+                self.hand.rotation = 0
+            
+
         if pressed_keys[K_UP]:
             self.rect.move_ip(0, -10)
         if pressed_keys[K_DOWN]:
@@ -115,10 +132,7 @@ class Item(pygame.sprite.Sprite):
         
         if textHover(self.pickup) and pygame.mouse.get_pressed()[0] and invcheck and time.time() > wait + 0.2 and self.pickup in all_text:
             wait = time.time()
-            print(player.inventory)
 
-            # all_sprites.remove(self)
-            # all_text.remove(self.pickup)
             self.surf = pygame.image.load(f"2D-Rpg-Game-Optimised/sprites/{self.type}.png").convert()
             self.surf.set_colorkey((255,255,255))
             self.rect = player.surf.get_rect(center = (player.rect.centerx, player.rect.centery))
@@ -161,6 +175,28 @@ class Sword(Item):
                 all_text.add(self.pickup2)
         if textHover(self.pickup) and pygame.mouse.get_pressed()[0] and invcheck and time.time() > wait + 0.2:
             self.pickup2.kill() 
+        if textHover(self.pickup2) and pygame.mouse.get_pressed()[0] and invcheck and time.time() > wait + 0.2 and self in all_sprites and self.clicked:
+
+            wait = time.time()
+
+            self.surf = pygame.image.load(f"2D-Rpg-Game-Optimised/sprites/{self.type}.png").convert()
+            self.surf.set_colorkey((255,255,255))
+            
+            player.hand = self
+            self.rotation = 0
+
+            player.inventory.pop(self.index)
+            self.kill()
+            self.pickup.kill()
+            self.pickup2.kill()
+
+            for item in player.inventory:
+                if item.index > self.index:
+                    item.index -= 1
+            
+            player.openInventory()
+            player.openInventory()
+
         super(Sword, self).Update(pressedKeys)
 
         
