@@ -69,7 +69,9 @@ class Player(pygame.sprite.Sprite):
 
             for item in player.inventory:
                 item.kill()
-            
+            for text in all_text:
+                text.kill()
+
             invcheck = False
 
 
@@ -78,6 +80,7 @@ class Item(pygame.sprite.Sprite):
     def __init__(self):
         super(Item, self).__init__()
     def Update(self, pressedKeys):
+        global wait
         if collisionCheck(player, self) and not invcheck and not self.inv:
             all_text.add(self.pickup)
             if pressedKeys[K_e] and len(player.inventory) < 64:
@@ -86,7 +89,7 @@ class Item(pygame.sprite.Sprite):
                 self.index = len(player.inventory) - 1
                 self.inv = True
                 self.kill()
-        elif not collisionCheck(player, self) and not invcheck:
+        elif not collisionCheck(player, self) and not self.inv or invcheck and not self.inv:
             all_text.remove(self.pickup)
         
         if hoverCheck(self) and invcheck and self.inv:
@@ -94,14 +97,46 @@ class Item(pygame.sprite.Sprite):
                 self.surf.fill((50, 50, 50), special_flags=pygame.BLEND_RGB_ADD) 
                 self.hover = True
         
-        # if hoverCheck(self) and pygame.mouse.get_pressed([0]) == True and invcheck and self.inv and not self.clicked and time.time() < wait - 1:
-        #     print("funker")
-        #     wait = time.time()
+        if pygame.mouse.get_pressed()[0] and hoverCheck(self) and invcheck and self.inv and time.time() > wait + 0.2 and not textHover(self.pickup):
+            if self.clicked == True:
+                self.clicked = False
+                all_text.remove(self.pickup)
+            else:
+                self.pickup = Text("Drop", 25, (254,254,254), (self.rect.centerx + 10, self.rect.centery - 30), self)
+                all_text.add(self.pickup)
+                self.clicked = True
 
-        elif not hoverCheck(self) and invcheck and self.inv:
+            wait = time.time()
+
+        elif not hoverCheck(self) and invcheck and self.inv and not textHover(self.pickup):
             self.hover = False
             self.surf = pygame.image.load(f"2D-Rpg-Game-Optimised/sprites/{self.type}.png").convert()
             self.surf.set_colorkey((255,255,255))
+        
+        if textHover(self.pickup) and pygame.mouse.get_pressed()[0] and invcheck and time.time() > wait + 0.2 and self.pickup in all_text:
+            wait = time.time()
+            print(player.inventory)
+
+            # all_sprites.remove(self)
+            # all_text.remove(self.pickup)
+            self.surf = pygame.image.load(f"2D-Rpg-Game-Optimised/sprites/{self.type}.png").convert()
+            self.surf.set_colorkey((255,255,255))
+            self.rect = player.surf.get_rect(center = (player.rect.centerx, player.rect.centery))
+            self.pickup = Text("E", 25, (0,0,0), (self.rect.centerx, self.rect.centery - 70), self)
+            self.inv = False
+
+            all_items.add(self)
+
+            player.inventory.pop(self.index)
+            self.pickup.kill()
+            
+            for item in player.inventory:
+                if item.index > self.index:
+                    item.index -= 1
+            
+            player.openInventory()
+            player.openInventory()
+            
 
 
 class Sword(Item):
@@ -111,13 +146,26 @@ class Sword(Item):
         self.surf.set_colorkey((255,255,255))
         self.rect = self.surf.get_rect(center = (random.randint(0, SCREEN_WIDTH), random.randint(0, SCREEN_HEIGHT)))
         self.type = "Sword"
-        self.pickup = Text("E", 25, (254,254,254), (self.rect.centerx + 10, self.rect.centery - 30), self)
+        self.pickup = Text("E", 25, (0,0,0), (self.rect.centerx + 10, self.rect.centery - 30), self)
+        self.pickup2 = Text("Equip", 25, (255,255,255), (self.rect.centerx + 10, self.rect.centery - 10), self)
         self.inv = False
         self.hover = False
         self.clicked = False
     def Update(self, pressedKeys):
-
+        global wait
+        if pygame.mouse.get_pressed()[0] and hoverCheck(self) and invcheck and self.inv and time.time() > wait + 0.2 and not textHover(self.pickup) and self in all_sprites:
+            if self.clicked:
+                all_text.remove(self.pickup2)
+            elif not self.clicked:
+                self.pickup2 = Text("Equip", 25, (255,255,255), (self.rect.centerx + 10, self.rect.centery - 10), self)
+                all_text.add(self.pickup2)
+        if textHover(self.pickup) and pygame.mouse.get_pressed()[0] and invcheck and time.time() > wait + 0.2:
+            self.pickup2.kill() 
         super(Sword, self).Update(pressedKeys)
+
+        
+       
+        
 
 
 class InventoryBack(pygame.sprite.Sprite):
@@ -131,7 +179,7 @@ class Text(pygame.sprite.Sprite):
     def __init__(self, txt, size, color, position, parent = 0):
         super(Text, self).__init__()
         self.font = pygame.font.Font("2D-Rpg-Game-Optimised/CenturyGothic.ttf", size)
-        self.text = self.font.render(txt, True, color, (254,254,254))
+        self.text = self.font.render(txt, True, color, (255,255,255))
         self.text.set_colorkey((255,255,255))
         self.rect = (position)
         self.parent = parent
@@ -145,6 +193,14 @@ def collisionCheck(obj1, obj2):
 def hoverCheck(obj):
     x, y = pygame.mouse.get_pos()
     if (obj.rect.x + obj.surf.get_width()) > x and obj.rect.x < x and (obj.rect.y + obj.surf.get_height()) > y and obj.rect.y < y:
+        return True
+    else:
+        return False
+def textHover(obj):
+    x, y = pygame.mouse.get_pos()
+    xpos, ypos = obj.rect
+    width, height = obj.font.size("Drop")
+    if xpos + width > x and xpos < x and ypos + height > y and ypos < y:
         return True
     else:
         return False
