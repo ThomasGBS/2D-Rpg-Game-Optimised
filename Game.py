@@ -33,16 +33,18 @@ class Player(pygame.sprite.Sprite):
     def update(self, pressed_keys):
         global wait
         if self.hand != None:
-            self.hand.rect = (player.rect.centerx + 10, player.rect.centery - 20)
+            self.hand.rect = self.surf.get_rect(center = (player.rect.centerx + 10, player.rect.centery - 20))
             if not self.hand in all_sprites:
                 all_sprites.add(self.hand)
             if pygame.mouse.get_pressed()[0] and not invcheck and self.hand.rotation == 0 and time.time() > wait + 0.2 or self.hand.rotation > 0 and self.hand.rotation < 50:
                 print("working")
-                wait = time.time
+                wait = time.time()
                 self.hand.rotation += 5
+                print(self.hand.rect.x, self.hand.rect.y)
                 self.hand.surf = pygame.transform.rotate(player.hand.surf, self.hand.rotation)
-            elif self.hand.rotation > 50:
-                self.hand.surf = pygame.transform.rotate(player.hand.surf, -self.hand.rotation)
+            elif self.hand.rotation >= 50:
+                self.hand.surf = pygame.image.load(f"2D-Rpg-Game-Optimised/sprites/{self.hand.type}.png").convert()
+                self.hand.surf.set_colorkey((255,255,255))
                 self.hand.rotation = 0
             
 
