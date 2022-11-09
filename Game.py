@@ -28,26 +28,29 @@ class Player(pygame.sprite.Sprite):
         self.rect = self.surf.get_rect()
         self.inventory = []
         self.hand = None
+        self.attacking = False
 
 
     def update(self, pressed_keys):
         global wait
+        
         if self.hand != None:
             self.hand.rect = self.surf.get_rect(center = (player.rect.centerx + 45, player.rect.centery + 45))
             if not self.hand in all_sprites:
                 all_sprites.add(self.hand)
             if pygame.mouse.get_pressed()[0] and not invcheck and self.hand.rotation == 0 and time.time() > wait + 0.5:
-                print("working")
                 wait = time.time()
                 self.hand.rotation -= 40
                 self.hand.surf = pygame.transform.rotate(player.hand.surf, self.hand.rotation)
-                self.hand.slash.rect = self.hand.rect.x + 20, self.hand.rect.y
-                all_sprites.add(self.hand.slash)
+                self.attacking = True
             elif time.time() > wait + 0.3:
                 self.hand.surf = pygame.image.load(f"2D-Rpg-Game-Optimised/sprites/{self.hand.type}.png").convert()
                 self.hand.surf.set_colorkey((255,255,255))
                 self.hand.rotation = 0
-                all_sprites.remove(self.hand.slash)
+                self.attacking = False
+            if self.attacking and not self.inventory:
+                screen.blit(pygame.transform.flip(self.hand.slash, True, False), (self.hand.rect.x + 20,self.hand.rect.y-10))
+
             
 
         if pressed_keys[K_UP]:
@@ -163,7 +166,7 @@ class Enemy(pygame.sprite.Sprite):
         self.rect = self.surf.get_rect(center = (200,200))
 
     def Update(self):
-        px, py = player.rect.x, player.rect.y
+        px, py = player.rect.centerx - 20, player.rect.centery - 20
         x, y = self.rect.x, self.rect.y
 
         if px > x:
@@ -174,9 +177,9 @@ class Enemy(pygame.sprite.Sprite):
             self.rect.move_ip(0, 2)
         if py < y:
             self.rect.move_ip(0, -2)
-        
-        if collisionCheck(player, self):
-            print("GAME OVER")
+        # if player.hand != None:
+        #     if collisionCheck((player.hand.slash, player.hand.slash.get_rect(center = (player.hand.rect.x + 20,player.hand.rect.y))), self):
+        #         print("GAME OVER")
 
 class Sword(Item):
     def __init__(self):
@@ -187,13 +190,11 @@ class Sword(Item):
         self.type = "Sword"
         self.pickup = Text("E", 25, (0,0,0), (self.rect.centerx + 10, self.rect.centery - 30), self)
         self.pickup2 = Text("Equip", 25, (255,255,255), (self.rect.centerx + 10, self.rect.centery - 10), self)
-        #self.slash
-        self.slash.surf = pygame.image.load("2D-Rpg-Game-Optimised/sprites/Slash.png")
-        self.slash.surf.set_colorkey((0,0,0))
-        self.slash.rect = self.slash.surf.get_rect()
         self.inv = False
         self.hover = False
         self.clicked = False
+        self.slash = pygame.image.load("2D-Rpg-Game-Optimised/sprites/Slash.png").convert()
+        self.slash.set_colorkey((0,0,0))
     def Update(self, pressedKeys):
         global wait
         if pygame.mouse.get_pressed()[0] and hoverCheck(self) and invcheck and self.inv and time.time() > wait + 0.2 and not textHover(self.pickup) and self in all_sprites:
