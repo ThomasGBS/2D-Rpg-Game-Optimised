@@ -33,19 +33,21 @@ class Player(pygame.sprite.Sprite):
     def update(self, pressed_keys):
         global wait
         if self.hand != None:
-            self.hand.rect = self.surf.get_rect(center = (player.rect.centerx + 10, player.rect.centery - 20))
+            self.hand.rect = self.surf.get_rect(center = (player.rect.centerx + 45, player.rect.centery + 45))
             if not self.hand in all_sprites:
                 all_sprites.add(self.hand)
-            if pygame.mouse.get_pressed()[0] and not invcheck and self.hand.rotation == 0 and time.time() > wait + 0.2 or self.hand.rotation > 0 and self.hand.rotation < 50:
+            if pygame.mouse.get_pressed()[0] and not invcheck and self.hand.rotation == 0 and time.time() > wait + 0.5:
                 print("working")
                 wait = time.time()
-                self.hand.rotation += 5
-                print(self.hand.rect.x, self.hand.rect.y)
+                self.hand.rotation -= 40
                 self.hand.surf = pygame.transform.rotate(player.hand.surf, self.hand.rotation)
-            elif self.hand.rotation >= 50:
+                self.hand.slash.rect = self.hand.rect.x + 20, self.hand.rect.y
+                all_sprites.add(self.hand.slash)
+            elif time.time() > wait + 0.3:
                 self.hand.surf = pygame.image.load(f"2D-Rpg-Game-Optimised/sprites/{self.hand.type}.png").convert()
                 self.hand.surf.set_colorkey((255,255,255))
                 self.hand.rotation = 0
+                all_sprites.remove(self.hand.slash)
             
 
         if pressed_keys[K_UP]:
@@ -153,7 +155,28 @@ class Item(pygame.sprite.Sprite):
             player.openInventory()
             player.openInventory()
             
+class Enemy(pygame.sprite.Sprite):
+    def __init__(self):
+        super(Enemy, self).__init__()
+        self.surf = pygame.image.load("2D-Rpg-Game-Optimised/sprites/Slime.png")
+        self.surf.set_colorkey((255,255,255))
+        self.rect = self.surf.get_rect(center = (200,200))
 
+    def Update(self):
+        px, py = player.rect.x, player.rect.y
+        x, y = self.rect.x, self.rect.y
+
+        if px > x:
+            self.rect.move_ip(2, 0)
+        if px < x:
+            self.rect.move_ip(-2, 0)
+        if py > y:
+            self.rect.move_ip(0, 2)
+        if py < y:
+            self.rect.move_ip(0, -2)
+        
+        if collisionCheck(player, self):
+            print("GAME OVER")
 
 class Sword(Item):
     def __init__(self):
@@ -164,6 +187,10 @@ class Sword(Item):
         self.type = "Sword"
         self.pickup = Text("E", 25, (0,0,0), (self.rect.centerx + 10, self.rect.centery - 30), self)
         self.pickup2 = Text("Equip", 25, (255,255,255), (self.rect.centerx + 10, self.rect.centery - 10), self)
+        #self.slash
+        self.slash.surf = pygame.image.load("2D-Rpg-Game-Optimised/sprites/Slash.png")
+        self.slash.surf.set_colorkey((0,0,0))
+        self.slash.rect = self.slash.surf.get_rect()
         self.inv = False
         self.hover = False
         self.clicked = False
@@ -178,33 +205,30 @@ class Sword(Item):
         if textHover(self.pickup) and pygame.mouse.get_pressed()[0] and invcheck and time.time() > wait + 0.2:
             self.pickup2.kill() 
         if textHover(self.pickup2) and pygame.mouse.get_pressed()[0] and invcheck and time.time() > wait + 0.2 and self in all_sprites and self.clicked:
+            if player.hand == None:
+                wait = time.time()
 
-            wait = time.time()
+                self.surf = pygame.image.load(f"2D-Rpg-Game-Optimised/sprites/{self.type}.png").convert()
+                self.surf.set_colorkey((255,255,255))
+                
+                player.hand = self
+                self.rotation = 0
 
-            self.surf = pygame.image.load(f"2D-Rpg-Game-Optimised/sprites/{self.type}.png").convert()
-            self.surf.set_colorkey((255,255,255))
-            
-            player.hand = self
-            self.rotation = 0
+                player.inventory.pop(self.index)
+                self.kill()
+                self.pickup.kill()
+                self.pickup2.kill()
 
-            player.inventory.pop(self.index)
-            self.kill()
-            self.pickup.kill()
-            self.pickup2.kill()
-
-            for item in player.inventory:
-                if item.index > self.index:
-                    item.index -= 1
-            
-            player.openInventory()
-            player.openInventory()
+                for item in player.inventory:
+                    if item.index > self.index:
+                        item.index -= 1
+                
+                player.openInventory()
+                player.openInventory()
+            else:
+                print("cant equip")
 
         super(Sword, self).Update(pressedKeys)
-
-        
-       
-        
-
 
 class InventoryBack(pygame.sprite.Sprite):
     def __init__(self):
@@ -221,7 +245,6 @@ class Text(pygame.sprite.Sprite):
         self.text.set_colorkey((255,255,255))
         self.rect = (position)
         self.parent = parent
-
 
 def collisionCheck(obj1, obj2):
     if (obj1.rect.x + obj1.surf.get_width()) > obj2.rect.x and obj1.rect.x < (obj2.rect.x + obj2.surf.get_width()) and (obj1.rect.y + obj1.surf.get_height()) > obj2.rect.y and obj1.rect.y < (obj2.rect.y + obj2.surf.get_width()):
@@ -250,6 +273,7 @@ screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 
 player = Player()
 inv = InventoryBack()
+enemy = Enemy()
 
 ADDITEM = pygame.USEREVENT + 1
 pygame.time.set_timer(ADDITEM, 1000)
@@ -263,6 +287,7 @@ all_items = pygame.sprite.Group()
 all_sprites = pygame.sprite.Group()
 
 all_sprites.add(player)
+all_sprites.add(enemy)
 
 wait = time.time()
 
@@ -296,6 +321,8 @@ while running:
         screen.blit(text.text, text.rect)
 
     player.update(pressed_keys)
+    enemy.Update()
+
 
     for item in all_items:
         item.Update(pressed_keys)
