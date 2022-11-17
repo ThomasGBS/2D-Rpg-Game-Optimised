@@ -18,18 +18,18 @@ from pygame.locals import (
 
 pygame.init()
 
-playerx, playery = 0, 0
+playerx, playery = -20, 0
 
-tiles = ['Grass', 'Cobbel', 'goal']
+tiles = ['GrassBig', 'CobbelBig', 'CobbelBigBorder']
 
 maze = [
-    [1, 1, 1, 1, 1, 1, 1, 1],
-    [1, 0, 0, 0, 1, 0, 0, 1],
-    [1, 0, 0, 0, 1, 1, 0, 1],
-    [1, 1, 1, 0, 0, 0, 0, 1],
-    [1, 1, 1, 0, 1, 0, 0, 1],
-    [1, 1, 1, 0, 1, 0, 0, 1],
-    [1, 0, 0, 0, 0, 0, 0, 1],
+    [1, 1, 1, 1, 1, 1, 1, 1,],
+    [1, 0, 0, 0, 1, 0, 0, 1,],
+    [1, 0, 0, 0, 1, 1, 0, 1,],
+    [1, 1, 1, 0, 0, 0, 0, 1,],
+    [1, 1, 1, 0, 1, 0, 0, 1,],
+    [1, 1, 1, 0, 1, 0, 0, 1,],
+    [1, 0, 0, 0, 0, 0, 0, 1,],
     [1, 1, 1, 1, 1, 1, 1, 1]
 ]
 
@@ -41,24 +41,28 @@ class Player(pygame.sprite.Sprite):
     def __init__(self):
         super(Player, self).__init__()
         self.surf = pygame.image.load("2D-Rpg-Game-Optimised/sprites/Player.png").convert()
+        self.surf = pygame.transform.scale(self.surf, (70, 100))
         self.surf.set_colorkey((255,255,255), RLEACCEL)
         self.rect = self.surf.get_rect(center = (SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2))
         self.inventory = []
         self.hand = None
         self.attacking = False
+        self.dir = "down"
 
 
     def update(self, pressed_keys):
         global wait
-        global playery
-        global playerx
-        upbusy = False
-        downbusy = False
-        leftbusy = False
-        rightbusy = False
 
         if self.hand != None:
-            self.hand.rect = self.surf.get_rect(center = (player.rect.centerx + 45, player.rect.centery + 45))
+            if self.dir == "down":
+                self.hand.rect = self.surf.get_rect(center = (player.rect.centerx + 45, player.rect.centery + 45))
+            if self.dir == "up":
+                self.hand.rect = self.surf.get_rect(center = (player.rect.centerx + 45, player.rect.centery + 45))
+            if self.dir == "left":
+                self.hand.rect = self.surf.get_rect(center = (player.rect.centerx - 15, player.rect.centery + 45))
+            if self.dir == "right":
+                self.hand.rect = self.surf.get_rect(center = (player.rect.centerx + 45, player.rect.centery + 45))
+
             if not self.hand in all_sprites:
                 all_sprites.add(self.hand)
             if pygame.mouse.get_pressed()[0] and not invcheck and self.hand.rotation == 0 and time.time() > wait + 0.5:
@@ -79,17 +83,32 @@ class Player(pygame.sprite.Sprite):
                 
         if not invcheck:
             if pressed_keys[K_UP]:
+                self.surf = pygame.image.load("2D-Rpg-Game-Optimised/sprites/PlayerUp.png").convert()
+                self.surf = pygame.transform.scale(self.surf, (70, 100))
+                self.surf.set_colorkey((255,255,255), RLEACCEL)
                 move(0,-5)
+                self.dir = "up"
 
             if pressed_keys[K_DOWN]:
+                self.surf = pygame.image.load("2D-Rpg-Game-Optimised/sprites/Player.png").convert()
+                self.surf = pygame.transform.scale(self.surf, (70, 100))
+                self.surf.set_colorkey((255,255,255), RLEACCEL)
                 move(0,5)
+                self.dir = "down"
 
             if pressed_keys[K_LEFT]:
+                self.surf = pygame.image.load("2D-Rpg-Game-Optimised/sprites/PlayerLeft.png").convert()
+                self.surf = pygame.transform.scale(self.surf, (70, 100))
+                self.surf.set_colorkey((255,255,255), RLEACCEL)
                 move(-5,0)
+                self.dir = "left"
 
             if pressed_keys[K_RIGHT]:
+                self.surf = pygame.transform.flip(pygame.image.load("2D-Rpg-Game-Optimised/sprites/PlayerLeft.png"), True, False).convert()
+                self.surf = pygame.transform.scale(self.surf, (70, 100))
+                self.surf.set_colorkey((255,255,255), RLEACCEL)
                 move(5,0)
-            
+                self.dir = "right"
 
     def openInventory(self):
         global invcheck
@@ -122,12 +141,29 @@ class Enemy(pygame.sprite.Sprite):
         super(Enemy, self).__init__()
         self.surf = pygame.image.load("2D-Rpg-Game-Optimised/sprites/Slime.png")
         self.surf.set_colorkey((255,255,255))
-        self.rect = self.surf.get_rect(center = (200,200))
+        self.rect = self.surf.get_rect(center = (SCREEN_WIDTH + 200, 200))
 
     def Update(self):
         x, y = self.rect.x, self.rect.y
         pX = player.rect.centerx
         pY = player.rect.centery
+
+        dist = math.hypot(pX-x, pY-y)
+
+        if dist < 200: 
+            busy = False
+            for row in range(len(maze)):
+                for column in range(len(maze[row])):
+                    tilex = column * TILE_SIZE + playerx
+                    tiley = row * TILE_SIZE + playery
+                    tile = tiles[maze[row][column]]
+                    if tile == "CobbelBig":
+                        if self.rect.x + self.surf.get_width() - (x-pX) / 30 > tilex and self.rect.x < tilex - (x-pX) / 30 + TILE_SIZE and self.rect.y + self.surf.get_height() - (y-pY) / 30 > tiley and self.rect.y - (y-pY) / 30  < tiley + TILE_SIZE:
+                            busy = True
+            if not busy:
+                self.rect.x -= (x-pX) / 50
+                self.rect.y -= (y-pY) / 50 
+
 
         # angle = math.atan2(targetX, targetY)
         # dx = math.cos(angle) * 3
@@ -141,9 +177,7 @@ class Enemy(pygame.sprite.Sprite):
         # dify = disY / disX
         # self.rect.x -= 1 / difx
         # self.rect.y -= 1 / dify
-
-        self.rect.x -= (x-pX) / 30
-        self.rect.y -= (y-pY) / 30 
+        
 
         if player.hand != None and not invcheck and player.hand.slash != None:
             if collisionCheck(player.hand.slash, self):
@@ -166,7 +200,7 @@ class Item(pygame.sprite.Sprite):
                 x = column * TILE_SIZE + playerx
                 y = row * TILE_SIZE + playery
                 tile = tiles[maze[row][column]]
-                if tile == "Cobbel":
+                if tile == "CobbelBig":
                     if ranx + self.surf.get_width() > x and ranx < x + TILE_SIZE and rany + self.surf.get_height() > y and rany < y + TILE_SIZE:
                         if clones == 0:
                             newitem = Sword()
@@ -312,12 +346,16 @@ def move(nr1,nr2):
     global playerx
     global playery
     busy = False
+    # for tile in all_cobbel:
+    #     if player.rect.x + player.surf.get_width() + nr1 > tile.x and player.rect.x + nr1 < tile.x + TILE_SIZE and player.rect.y + player.surf.get_height() + nr2 > tile.y and player.rect.y + nr2 < tile.y + TILE_SIZE:#x + TILE_SIZE > player.rect.x and x < player.rect.x + player.surf.get_width() and y + TILE_SIZE + 5 > player.rect.y and y + 5 < player.rect.y + player.surf.get_height():
+    #         busy = True
+    #         print("ow")
     for row in range(len(maze)):
         for column in range(len(maze[row])):
             x = column * TILE_SIZE + playerx
             y = row * TILE_SIZE + playery
             tile = tiles[maze[row][column]]
-            if tile == "Cobbel":
+            if tile == "CobbelBig":
                 if player.rect.x + player.surf.get_width() + nr1 > x and player.rect.x + nr1 < x + TILE_SIZE and player.rect.y + player.surf.get_height() + nr2 > y and player.rect.y + nr2 < y + TILE_SIZE:#x + TILE_SIZE > player.rect.x and x < player.rect.x + player.surf.get_width() and y + TILE_SIZE + 5 > player.rect.y and y + 5 < player.rect.y + player.surf.get_height():
                     busy = True
     if not busy:
@@ -335,7 +373,30 @@ def draw():
             x = column * TILE_SIZE + playerx
             y = row * TILE_SIZE + playery
             tile = tiles[maze[row][column]]
-            screen.blit(pygame.image.load(f"2D-Rpg-Game-Optimised/sprites/{tile}Big.png"), (x, y))
+            # tile = pygame.sprite.Sprite()
+            # tile.tiles = tiles[maze[row][column]]
+            # tile.num = ((row + 1) * 8) - (8-(column + 1))
+            # tile.x = x
+            # tile.y = y
+            # if tile.tiles == "GrassBig":
+            #     check = 0
+            #     for block in all_grass:
+            #         if tile.num == block.num:
+            #             check += 1
+            #             block = tile
+            #     if check == 0:
+            #         all_grass.append(tile)
+
+            # if tile.tiles == "CobbelBig":
+            #     check = 0
+            #     for block in all_cobbel:
+            #         if tile.num == block.num:
+            #             block = tile
+            #             check += 1
+            #     if check == 0:
+            #         all_grass.append(tile)
+            
+            screen.blit(pygame.image.load(f"2D-Rpg-Game-Optimised/sprites/{tile}.png"), (x, y))
 
 def collisionCheck(obj1, obj2):
     if (obj1.rect.x + obj1.surf.get_width()) > obj2.rect.x and obj1.rect.x < (obj2.rect.x + obj2.surf.get_width()) and (obj1.rect.y + obj1.surf.get_height()) > obj2.rect.y and obj1.rect.y < (obj2.rect.y + obj2.surf.get_width()):
@@ -376,6 +437,8 @@ invcheck = False
 all_text = pygame.sprite.Group()
 all_items = pygame.sprite.Group()
 all_sprites = pygame.sprite.Group()
+all_grass = []
+all_cobbel = []
 
 all_sprites.add(player)
 all_sprites.add(enemy)
@@ -402,7 +465,7 @@ while running:
                 # all_items.add(newitem)
                 # all_sprites.add(newitem)
         
-    screen.fill((135, 206, 250))
+    screen.fill((0, 0, 0))
 
     draw()
 
