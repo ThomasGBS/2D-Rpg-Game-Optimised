@@ -52,32 +52,50 @@ class Player(pygame.sprite.Sprite):
 
     def update(self, pressed_keys):
         global wait
-
+        sworddir = ""
         if self.hand != None:
             if self.dir == "down":
-                self.hand.rect = self.surf.get_rect(center = (player.rect.centerx + 45, player.rect.centery + 45))
+                sworddir = "self.hand.surf = pygame.transform.flip(pygame.image.load('2D-Rpg-Game-Optimised/sprites/Sword.png'), True, False).convert()"
+                exec(sworddir)
+                self.hand.rect = self.surf.get_rect(center = (player.rect.centerx, player.rect.centery + 45))
             if self.dir == "up":
-                self.hand.rect = self.surf.get_rect(center = (player.rect.centerx + 45, player.rect.centery + 45))
+                sworddir = "self.hand.surf = pygame.image.load('2D-Rpg-Game-Optimised/sprites/Sword.png').convert()"
+                exec(sworddir)
+                self.hand.rect = self.surf.get_rect(center = (player.rect.centerx + 35, player.rect.centery + 10))
             if self.dir == "left":
-                self.hand.rect = self.surf.get_rect(center = (player.rect.centerx - 15, player.rect.centery + 45))
+                sworddir = "self.hand.surf = pygame.transform.flip(pygame.image.load('2D-Rpg-Game-Optimised/sprites/Sword.png'), True, False).convert()"
+                exec(sworddir)
+                self.hand.rect = self.surf.get_rect(center = (player.rect.centerx, player.rect.centery + 30))
             if self.dir == "right":
-                self.hand.rect = self.surf.get_rect(center = (player.rect.centerx + 45, player.rect.centery + 45))
-
+                sworddir = "self.hand.surf = pygame.image.load('2D-Rpg-Game-Optimised/sprites/Sword.png').convert()"
+                exec(sworddir)
+                self.hand.rect = self.surf.get_rect(center = (player.rect.centerx + 45, player.rect.centery + 30))
+                
             if not self.hand in all_sprites:
                 all_sprites.add(self.hand)
             if pygame.mouse.get_pressed()[0] and not invcheck and self.hand.rotation == 0 and time.time() > wait + 0.5:
                 wait = time.time()
                 self.hand.rotation -= 40
-                self.hand.surf = pygame.transform.rotate(player.hand.surf, self.hand.rotation)
+                exec(sworddir)
+                self.hand.surf = pygame.transform.rotate(player.hand.surf, self.hand.rotation).convert()
+                self.hand.surf.set_colorkey((255,255,255))
                 self.attacking = True
             elif time.time() > wait + 0.3:
-                self.hand.surf = pygame.image.load(f"2D-Rpg-Game-Optimised/sprites/{self.hand.type}.png").convert()
+                exec(sworddir)
                 self.hand.surf.set_colorkey((255,255,255))
                 self.hand.rotation = 0
                 self.attacking = False
                 self.hand.slash = None
             if self.attacking and not invcheck:
-                self.hand.slash = Empty(self.hand.rect.x + 65,self.hand.rect.y + 30,"2D-Rpg-Game-Optimised/sprites/Slash.png")
+                if self.dir == "right":
+                    self.hand.slash = Empty(self.hand.rect.x + 65,self.hand.rect.y + 30,"self.surf = pygame.image.load('2D-Rpg-Game-Optimised/sprites/Slash.png').convert()")
+                if self.dir == "left":
+                    self.hand.slash = Empty(self.hand.rect.x + 65,self.hand.rect.y + 30,"self.surf = pygame.transform.flip(pygame.image.load('2D-Rpg-Game-Optimised/sprites/Slash.png'), True, False).convert()")
+                if self.dir == "up":
+                    self.hand.slash = Empty(self.hand.rect.x + 10,self.hand.rect.y - 30,"self.surf = pygame.transform.rotate(pygame.image.load('2D-Rpg-Game-Optimised/sprites/Slash.png'), -90).convert()")
+                if self.dir == "down":
+                    self.hand.slash = Empty(self.hand.rect.x + 65,self.hand.rect.y + 30,"self.surf = pygame.image.load('2D-Rpg-Game-Optimised/sprites/Slash.png').convert()")
+                
                 self.hand.slash.surf.set_colorkey((0,0,0))
                 screen.blit(pygame.transform.flip(self.hand.slash.surf, True, False), self.hand.slash.rect)
                 
@@ -339,7 +357,7 @@ class Text(pygame.sprite.Sprite):
 
 class Empty(pygame.sprite.Sprite):
     def __init__(self, x, y, img):
-        self.surf = pygame.image.load(img).convert()
+        exec(img)#pygame.image.load(img).convert()
         self.rect = self.surf.get_rect(center = (x,y))
 
 def move(nr1,nr2):
