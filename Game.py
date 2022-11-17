@@ -219,7 +219,7 @@ class Item(pygame.sprite.Sprite):
 
         elif not hoverCheck(self) and invcheck and self.inv and not textHover(self.pickup):
             self.hover = False
-            self.surf = pygame.transform.scale(pygame.image.load(f"2D-Rpg-Game-Optimised/sprites/{self.type}.png"), (50,50))
+            self.surf = pygame.image.load(f"2D-Rpg-Game-Optimised/sprites/{self.type}.png").convert()
             self.surf.set_colorkey((255,255,255))
         
         if textHover(self.pickup) and pygame.mouse.get_pressed()[0] and invcheck and time.time() > wait + 0.2 and self.pickup in all_text:
@@ -335,7 +335,7 @@ def draw():
             x = column * TILE_SIZE + playerx
             y = row * TILE_SIZE + playery
             tile = tiles[maze[row][column]]
-            screen.blit(pygame.image.load(f"MapTesting/{tile}Big.png"), (x, y))
+            screen.blit(pygame.image.load(f"2D-Rpg-Game-Optimised/sprites/{tile}Big.png"), (x, y))
 
 def collisionCheck(obj1, obj2):
     if (obj1.rect.x + obj1.surf.get_width()) > obj2.rect.x and obj1.rect.x < (obj2.rect.x + obj2.surf.get_width()) and (obj1.rect.y + obj1.surf.get_height()) > obj2.rect.y and obj1.rect.y < (obj2.rect.y + obj2.surf.get_width()):
