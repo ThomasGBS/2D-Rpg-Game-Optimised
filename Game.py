@@ -48,35 +48,48 @@ class Player(pygame.sprite.Sprite):
         self.hand = None
         self.attacking = False
         self.dir = "down"
+        self.health = 100
 
 
     def update(self, pressed_keys):
         global wait
+        global running
+        if self.health <= 0:
+            print("died")
+            self.kill()
+            time.sleep(1)
+            running = False
         sworddir = ""
         if self.hand != None:
-            if self.dir == "down":
-                sworddir = "self.hand.surf = pygame.transform.flip(pygame.image.load('2D-Rpg-Game-Optimised/sprites/Sword.png'), True, False).convert()"
+            if self.dir == "down" and not self.attacking:
+                sworddir = "self.hand.surf = pygame.transform.flip(pygame.image.load('2D-Rpg-Game-Optimised/sprites/Sword.png'), True, True).convert()"
                 exec(sworddir)
-                self.hand.rect = self.surf.get_rect(center = (player.rect.centerx, player.rect.centery + 45))
-            if self.dir == "up":
+                self.hand.surf.set_colorkey((255,255,255))
+                self.hand.rect = self.surf.get_rect(center = (player.rect.centerx, player.rect.centery + 55))
+            if self.dir == "up" and not self.attacking:
                 sworddir = "self.hand.surf = pygame.image.load('2D-Rpg-Game-Optimised/sprites/Sword.png').convert()"
                 exec(sworddir)
+                self.hand.surf.set_colorkey((255,255,255))
                 self.hand.rect = self.surf.get_rect(center = (player.rect.centerx + 35, player.rect.centery + 10))
-            if self.dir == "left":
+            if self.dir == "left" and not self.attacking:
                 sworddir = "self.hand.surf = pygame.transform.flip(pygame.image.load('2D-Rpg-Game-Optimised/sprites/Sword.png'), True, False).convert()"
                 exec(sworddir)
+                self.hand.surf.set_colorkey((255,255,255))                
                 self.hand.rect = self.surf.get_rect(center = (player.rect.centerx, player.rect.centery + 30))
-            if self.dir == "right":
+            if self.dir == "right" and not self.attacking:
                 sworddir = "self.hand.surf = pygame.image.load('2D-Rpg-Game-Optimised/sprites/Sword.png').convert()"
                 exec(sworddir)
+                self.hand.surf.set_colorkey((255,255,255))                
                 self.hand.rect = self.surf.get_rect(center = (player.rect.centerx + 45, player.rect.centery + 30))
                 
             if not self.hand in all_sprites:
                 all_sprites.add(self.hand)
             if pygame.mouse.get_pressed()[0] and not invcheck and self.hand.rotation == 0 and time.time() > wait + 0.5:
                 wait = time.time()
-                self.hand.rotation -= 40
-                exec(sworddir)
+                if self.dir == "right" or self.dir == "up":
+                    self.hand.rotation -= 40
+                elif self.dir == "left" or self.dir == "down":
+                    self.hand.rotation += 40
                 self.hand.surf = pygame.transform.rotate(player.hand.surf, self.hand.rotation).convert()
                 self.hand.surf.set_colorkey((255,255,255))
                 self.attacking = True
@@ -88,13 +101,13 @@ class Player(pygame.sprite.Sprite):
                 self.hand.slash = None
             if self.attacking and not invcheck:
                 if self.dir == "right":
-                    self.hand.slash = Empty(self.hand.rect.x + 65,self.hand.rect.y + 30,"self.surf = pygame.image.load('2D-Rpg-Game-Optimised/sprites/Slash.png').convert()")
+                    self.hand.slash = Empty(self.hand.rect.x + 50,self.hand.rect.y + 25,"self.surf = pygame.image.load('2D-Rpg-Game-Optimised/sprites/Slash.png').convert()")
                 if self.dir == "left":
-                    self.hand.slash = Empty(self.hand.rect.x + 65,self.hand.rect.y + 30,"self.surf = pygame.transform.flip(pygame.image.load('2D-Rpg-Game-Optimised/sprites/Slash.png'), True, False).convert()")
+                    self.hand.slash = Empty(self.hand.rect.x - 10,self.hand.rect.y + 25,"self.surf = pygame.transform.flip(pygame.image.load('2D-Rpg-Game-Optimised/sprites/Slash.png'), True, False).convert()")
                 if self.dir == "up":
                     self.hand.slash = Empty(self.hand.rect.x + 10,self.hand.rect.y - 30,"self.surf = pygame.transform.rotate(pygame.image.load('2D-Rpg-Game-Optimised/sprites/Slash.png'), -90).convert()")
                 if self.dir == "down":
-                    self.hand.slash = Empty(self.hand.rect.x + 65,self.hand.rect.y + 30,"self.surf = pygame.image.load('2D-Rpg-Game-Optimised/sprites/Slash.png').convert()")
+                    self.hand.slash = Empty(self.hand.rect.x + 40,self.hand.rect.y + 60,"self.surf = pygame.transform.flip(pygame.transform.rotate(pygame.image.load('2D-Rpg-Game-Optimised/sprites/Slash.png'), 90), True, False).convert()")
                 
                 self.hand.slash.surf.set_colorkey((0,0,0))
                 screen.blit(pygame.transform.flip(self.hand.slash.surf, True, False), self.hand.slash.rect)
@@ -162,9 +175,11 @@ class Enemy(pygame.sprite.Sprite):
         self.rect = self.surf.get_rect(center = (SCREEN_WIDTH + 200, 200))
 
     def Update(self):
+        global enemywait
+        global immunity
         x, y = self.rect.x, self.rect.y
-        pX = player.rect.centerx
-        pY = player.rect.centery
+        pX = player.rect.centerx - 20
+        pY = player.rect.centery-20
 
         dist = math.hypot(pX-x, pY-y)
 
@@ -178,28 +193,23 @@ class Enemy(pygame.sprite.Sprite):
                     if tile == "CobbelBig":
                         if self.rect.x + self.surf.get_width() - (x-pX) / 30 > tilex and self.rect.x < tilex - (x-pX) / 30 + TILE_SIZE and self.rect.y + self.surf.get_height() - (y-pY) / 30 > tiley and self.rect.y - (y-pY) / 30  < tiley + TILE_SIZE:
                             busy = True
-            if not busy:
+            if not busy and dist < 100 and time.time() > enemywait + 0.7:
+                self.rect.x -= (x-pX) / 4
+                self.rect.y -= (y-pY) / 4 
+                if dist < 40:
+                    enemywait = time.time()
+            elif not busy and time.time() > enemywait + 0.9:
                 self.rect.x -= (x-pX) / 50
                 self.rect.y -= (y-pY) / 50 
 
 
-        # angle = math.atan2(targetX, targetY)
-        # dx = math.cos(angle) * 3
-        # dy = math.sin(angle) * 3
-        # self.rect.x += dx
-        # self.rect.y +=  dy
-
-        # disX = (x-pX)
-        # disY = (y-pY)
-        # difx = disX / disY
-        # dify = disY / disX
-        # self.rect.x -= 1 / difx
-        # self.rect.y -= 1 / dify
-        
-
         if player.hand != None and not invcheck and player.hand.slash != None:
             if collisionCheck(player.hand.slash, self):
                 self.kill()
+        if not invcheck and time.time() > immunity + 1:
+            if collisionCheck(player, self):
+                player.health -= 20
+                immunity = time.time()
 
 class Item(pygame.sprite.Sprite):
     def __init__(self):
@@ -462,6 +472,8 @@ all_sprites.add(player)
 all_sprites.add(enemy)
 
 wait = time.time()
+enemywait = time.time() 
+immunity = time.time()
 
 while running:
     
@@ -500,6 +512,9 @@ while running:
 
     for item in all_items:
         item.Update(pressed_keys)
+
+    pygame.draw.rect(screen, (0, 0, 0), pygame.Rect(SCREEN_WIDTH/ 2 - 110, SCREEN_HEIGHT - 75, 220, 50))
+    pygame.draw.rect(screen, (0,255,0), pygame.Rect(SCREEN_WIDTH/ 2 - 100, SCREEN_HEIGHT - 65, player.health * 2, 30))
 
     pygame.display.flip()
 
