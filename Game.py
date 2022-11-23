@@ -2,6 +2,8 @@ import pygame
 import time
 import random
 import math
+import socket
+import mysql.connector
 
 from pygame.locals import (
     RLEACCEL,
@@ -18,7 +20,15 @@ from pygame.locals import (
 
 pygame.init()
 
-playerx, playery = -20, 0
+PlayerData = mysql.connector.connect(
+  host="127.0.0.1",
+  user="root",
+  password="",
+  database="2d rpg game db"
+)
+dbCursor = PlayerData.cursor()
+
+
 
 tiles = ['GrassBig', 'CobbelBig', 'CobbelBigBorder']
 
@@ -146,17 +156,17 @@ class Player(pygame.sprite.Sprite):
         if not invcheck:
             invcheck = True
             all_sprites.add(inv)
-            x = inv.rect.x + 30
-            y = inv.rect.y + 30
+            x = inv.rect.x + 25
+            y = inv.rect.y + 25
             for item in self.inventory:
-                if x > inv.rect.x + 480:
-                    x = inv.rect.x + 30
-                    y += 60
+                if x > inv.rect.x + 400:
+                    x = inv.rect.x + 25
+                    y += 58
                 item.rect = newitem.surf.get_rect(center = (x, y))
                 item.surf = pygame.transform.scale(newitem.surf, (50,50)).convert()
                 all_sprites.add(item)
                 all_items.add(item)
-                x += 60
+                x += 59
         elif invcheck:
             all_sprites.remove(inv)
 
@@ -172,7 +182,8 @@ class Enemy(pygame.sprite.Sprite):
         super(Enemy, self).__init__()
         self.surf = pygame.image.load("2D-Rpg-Game-Optimised/sprites/Slime.png")
         self.surf.set_colorkey((255,255,255))
-        self.rect = self.surf.get_rect(center = (SCREEN_WIDTH + 200, 200))
+        self.rect = self.surf.get_rect(center = (SCREEN_WIDTH + 200 + playerx, 200 + playery))
+        self.isAlive = True
 
     def Update(self):
         global enemywait
@@ -183,7 +194,7 @@ class Enemy(pygame.sprite.Sprite):
 
         dist = math.hypot(pX-x, pY-y)
 
-        if dist < 200: 
+        if dist < 200 and self.isAlive: 
             busy = False
             for row in range(len(maze)):
                 for column in range(len(maze[row])):
@@ -206,16 +217,15 @@ class Enemy(pygame.sprite.Sprite):
         if player.hand != None and not invcheck and player.hand.slash != None:
             if collisionCheck(player.hand.slash, self):
                 self.kill()
-        if not invcheck and time.time() > immunity + 1:
+                self.isAlive = False
+        if not invcheck and time.time() > immunity + 1 and self.isAlive:
             if collisionCheck(player, self):
                 player.health -= 20
                 immunity = time.time()
 
 class Item(pygame.sprite.Sprite):
-    def __init__(self):
+    def __init__(self, inv = False):
         super(Item, self).__init__()
-        self.surf = pygame.image.load("2D-Rpg-Game-Optimised/sprites/Sword.png")
-        self.surf.set_colorkey((255,255,255))
         self.die = False
 
         ranx = random.randint(0, SCREEN_WIDTH)
@@ -223,18 +233,21 @@ class Item(pygame.sprite.Sprite):
 
         clones = 0
 
-        for row in range(len(maze)):
-            for column in range(len(maze[row])):
-                x = column * TILE_SIZE + playerx
-                y = row * TILE_SIZE + playery
-                tile = tiles[maze[row][column]]
-                if tile == "CobbelBig":
-                    if ranx + self.surf.get_width() > x and ranx < x + TILE_SIZE and rany + self.surf.get_height() > y and rany < y + TILE_SIZE:
-                        if clones == 0:
-                            newitem = Sword()
-                            self.die = True
-                            clones += 1
-                            break
+        myclass = f"{self.type}()"
+
+        if not inv:
+            for row in range(len(maze)):
+                for column in range(len(maze[row])):
+                    x = column * TILE_SIZE + playerx
+                    y = row * TILE_SIZE + playery
+                    tile = tiles[maze[row][column]]
+                    if tile == "CobbelBig":
+                        if ranx + self.surf.get_width() > x and ranx < x + TILE_SIZE and rany + self.surf.get_height() > y and rany < y + TILE_SIZE:
+                            if clones == 0:
+                                newitem = exec(myclass)
+                                self.die = True
+                                clones += 1
+                                break
                         
         self.rect = self.surf.get_rect(center = (ranx, rany))
         self.pickup = Text("E", 25, (0,0,0), (self.rect.centerx + 10, self.rect.centery - 30), self)
@@ -254,7 +267,7 @@ class Item(pygame.sprite.Sprite):
             all_text.remove(self.pickup)
             self.pickup = Text("E", 25, (0,0,0), (self.rect.centerx + 10, self.rect.centery - 30), self)
             all_text.add(self.pickup)
-            if pressedKeys[K_e] and len(player.inventory) < 64:
+            if pressedKeys[K_e] and len(player.inventory) < 49:
                 all_text.remove(self.pickup)
                 player.inventory.append(self)
                 self.index = len(player.inventory) - 1
@@ -307,11 +320,14 @@ class Item(pygame.sprite.Sprite):
             
 
 class Sword(Item):
-    def __init__(self):
-        super(Sword, self).__init__()
+    def __init__(self, inv = False):
+        self.surf = pygame.image.load("2D-Rpg-Game-Optimised/sprites/Sword.png")
+        self.surf.set_colorkey((255,255,255))
         self.type = "Sword"
+        super(Sword, self).__init__(inv)
         self.pickup2 = Text("Equip", 25, (255,255,255), (self.rect.centerx + 10, self.rect.centery - 10), self)
         self.slash = None
+        
 
     def Update(self, pressedKeys):
         global wait
@@ -348,6 +364,41 @@ class Sword(Item):
                 print("cant equip")
 
         super(Sword, self).Update(pressedKeys)
+
+class Apple(Item):
+    def __init__(self,inv = False):
+        self.surf = pygame.image.load("2D-Rpg-Game-Optimised/sprites/Apple.png")
+        self.surf.set_colorkey((255,255,255))
+        self.type = "Apple"
+        super(Apple, self).__init__(inv)
+        self.pickup2 = Text("Eat", 25, (255,255,255), (self.rect.centerx + 10, self.rect.centery - 10), self)
+        
+    
+    def Update(self, pressedKeys):
+        global wait
+        if pygame.mouse.get_pressed()[0] and hoverCheck(self) and invcheck and self.inv and time.time() > wait + 0.2 and not textHover(self.pickup) and self in all_sprites:
+            if self.clicked:
+                all_text.remove(self.pickup2)
+            elif not self.clicked:
+                self.pickup2 = Text("Eat", 25, (255,255,255), (self.rect.centerx + 10, self.rect.centery - 10), self)
+                all_text.add(self.pickup2)
+        if textHover(self.pickup) and pygame.mouse.get_pressed()[0] and invcheck and time.time() > wait + 0.2:
+            self.pickup2.kill() 
+        if textHover(self.pickup2) and pygame.mouse.get_pressed()[0] and invcheck and time.time() > wait + 0.2 and self in all_sprites and self.clicked:
+            if player.health >= 80:
+                player.health = 100
+            elif player.health < 80:
+                player.health += 20
+            
+            player.inventory.pop(self.index)
+            self.kill()
+            self.pickup.kill()
+            self.pickup2.kill()
+
+            for item in player.inventory:
+                if item.index > self.index:
+                    item.index -= 1
+        super(Apple, self).Update(pressedKeys)
 
 class InventoryBack(pygame.sprite.Sprite):
     def __init__(self):
@@ -453,7 +504,6 @@ screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 
 player = Player()
 inv = InventoryBack()
-enemy = Enemy()
 
 ADDITEM = pygame.USEREVENT + 1
 pygame.time.set_timer(ADDITEM, 1000)
@@ -465,15 +515,46 @@ invcheck = False
 all_text = pygame.sprite.Group()
 all_items = pygame.sprite.Group()
 all_sprites = pygame.sprite.Group()
-all_grass = []
-all_cobbel = []
+# all_grass = []
+# all_cobbel = []
 
 all_sprites.add(player)
-all_sprites.add(enemy)
 
 wait = time.time()
 enemywait = time.time() 
 immunity = time.time()
+
+dbCursor.execute("SELECT Ip from playerdata")
+adresser = dbCursor.fetchall()
+nyadresser = []
+for el in adresser:
+    el = str(el).replace('(', '').replace(')', '').replace("'", "").replace(',', '')
+    nyadresser.append(el)
+
+hostname=socket.gethostname()   
+IPAddr=socket.gethostbyname(hostname)
+
+if len(nyadresser) != 0 and IPAddr in nyadresser:
+    dbCursor.execute(f"SELECT Ip, Health, X, Y, Inventory FROM playerdata WHERE Ip = '{IPAddr}'")
+    oldplayerdata = dbCursor.fetchall()
+    playerx = oldplayerdata[0][2]
+    playery = oldplayerdata[0][3]
+    
+    player.health = oldplayerdata[0][1]
+    oldinv = list(oldplayerdata[0][4].replace("[", "").replace("]", "").replace("(", "").replace(")", "").replace("'", "").split(","))
+    for item in oldinv:
+        exec(f"newitem = {item}(True)")
+        newitem.kill()
+        player.inventory.append(newitem)
+        newitem.index = len(player.inventory) - 1
+        newitem.inv = True
+        
+else:
+    playerx, playery = -20, 0
+
+enemy = Enemy()
+
+all_sprites.add(enemy)
 
 while running:
     
@@ -482,16 +563,38 @@ while running:
         if event.type == KEYDOWN:
             
             if event.key == K_ESCAPE:
+                newinv = []
+                for item in player.inventory:
+                    newinv.append(item.type)
+                if len(nyadresser) != 0 and IPAddr in nyadresser:
+                   
+                    dbCursor.execute(f'UPDATE `playerdata` SET `Health`="{player.health}",`X`="{playerx}",`Y`="{playery}",`Inventory`="{newinv}" WHERE `Ip` = "{IPAddr}"')
+                else:
+                    dbCursor.execute(f'INSERT INTO playerdata(Ip,Health,X,Y,Inventory) VALUES("{IPAddr}", {player.health},{playerx},{playery},"{newinv}")')
+                PlayerData.commit()
                 running = False
             elif event.key == K_i:
                 player.openInventory()
 
         elif event.type == QUIT:
+            newinv = []
+            for item in player.inventory:
+                newinv.append(item.type)
+            if len(nyadresser) != 0 and IPAddr in nyadresser:
+                
+                dbCursor.execute(f'UPDATE `playerdata` SET `Health`="{player.health}",`X`="{playerx}",`Y`="{playery}",`Inventory`="{newinv}" WHERE `Ip` = "{IPAddr}"')
+            else:
+                dbCursor.execute(f'INSERT INTO playerdata(Ip,Health,X,Y,Inventory) VALUES("{IPAddr}", {player.health},{playerx},{playery},"{newinv}")')
+            PlayerData.commit()
             running = False
         
         elif event.type == ADDITEM and not invcheck:
             if len(all_items) < 5:
-                newitem = Sword()
+                ran = random.randint(1,2)
+                if ran == 1:
+                    newitem = Sword()
+                else:
+                    newitem = Apple()
                 # all_items.add(newitem)
                 # all_sprites.add(newitem)
         
