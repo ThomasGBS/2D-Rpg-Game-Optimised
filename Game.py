@@ -515,8 +515,7 @@ invcheck = False
 all_text = pygame.sprite.Group()
 all_items = pygame.sprite.Group()
 all_sprites = pygame.sprite.Group()
-# all_grass = []
-# all_cobbel = []
+menu_buttons = pygame.sprite.Group()
 
 all_sprites.add(player)
 
@@ -556,69 +555,98 @@ enemy = Enemy()
 
 all_sprites.add(enemy)
 
+menucheck = True
+
+start = Text("Start", 100, (0,0,0), (SCREEN_WIDTH/2 - 100, SCREEN_HEIGHT/2 - 80))
+
+menu_buttons.add(start)
+
 while running:
+    if menucheck == True:
+
+        for event in pygame.event.get():
+        
+            if event.type == KEYDOWN:
+                
+                if event.key == K_ESCAPE:
+                    running = False
+            elif event.type == QUIT:                    
+                running = False
+
+        screen.fill((40, 40, 240))
+
+        for text in menu_buttons:
+            screen.blit(text.text, text.rect)
+
+        if textHover(start) and pygame.mouse.get_pressed()[0]:
+            menucheck = False
+        
+        pygame.display.flip()
+
+        clock.tick(30)
+    elif menucheck == False:
     
-    for event in pygame.event.get():
-       
-        if event.type == KEYDOWN:
-            
-            if event.key == K_ESCAPE:
+        for event in pygame.event.get():
+        
+            if event.type == KEYDOWN:
+                
+                if event.key == K_ESCAPE:
+                    newinv = []
+                    for item in player.inventory:
+                        newinv.append(item.type)
+                    if len(nyadresser) != 0 and IPAddr in nyadresser:
+                    
+                        dbCursor.execute(f'UPDATE `playerdata` SET `Health`="{player.health}",`X`="{playerx}",`Y`="{playery}",`Inventory`="{newinv}" WHERE `Ip` = "{IPAddr}"')
+                    else:
+                        dbCursor.execute(f'INSERT INTO playerdata(Ip,Health,X,Y,Inventory) VALUES("{IPAddr}", {player.health},{playerx},{playery},"{newinv}")')
+                    PlayerData.commit()
+                    running = False
+                elif event.key == K_i:
+                    player.openInventory()
+
+            elif event.type == QUIT:
                 newinv = []
                 for item in player.inventory:
                     newinv.append(item.type)
                 if len(nyadresser) != 0 and IPAddr in nyadresser:
-                   
+                    
                     dbCursor.execute(f'UPDATE `playerdata` SET `Health`="{player.health}",`X`="{playerx}",`Y`="{playery}",`Inventory`="{newinv}" WHERE `Ip` = "{IPAddr}"')
                 else:
                     dbCursor.execute(f'INSERT INTO playerdata(Ip,Health,X,Y,Inventory) VALUES("{IPAddr}", {player.health},{playerx},{playery},"{newinv}")')
                 PlayerData.commit()
                 running = False
-            elif event.key == K_i:
-                player.openInventory()
+            
+            elif event.type == ADDITEM and not invcheck:
+                if len(all_items) < 5:
+                    ran = random.randint(1,2)
+                    if ran == 1:
+                        newitem = Sword()
+                    else:
+                        newitem = Apple()
+                    # all_items.add(newitem)
+                    # all_sprites.add(newitem)
+            
+        screen.fill((0, 0, 0))
 
-        elif event.type == QUIT:
-            newinv = []
-            for item in player.inventory:
-                newinv.append(item.type)
-            if len(nyadresser) != 0 and IPAddr in nyadresser:
-                
-                dbCursor.execute(f'UPDATE `playerdata` SET `Health`="{player.health}",`X`="{playerx}",`Y`="{playery}",`Inventory`="{newinv}" WHERE `Ip` = "{IPAddr}"')
-            else:
-                dbCursor.execute(f'INSERT INTO playerdata(Ip,Health,X,Y,Inventory) VALUES("{IPAddr}", {player.health},{playerx},{playery},"{newinv}")')
-            PlayerData.commit()
-            running = False
-        
-        elif event.type == ADDITEM and not invcheck:
-            if len(all_items) < 5:
-                ran = random.randint(1,2)
-                if ran == 1:
-                    newitem = Sword()
-                else:
-                    newitem = Apple()
-                # all_items.add(newitem)
-                # all_sprites.add(newitem)
-        
-    screen.fill((0, 0, 0))
+        draw()
 
-    draw()
+        pressed_keys = pygame.key.get_pressed()
 
-    pressed_keys = pygame.key.get_pressed()
+        for sprite in all_sprites:
+            screen.blit(sprite.surf, sprite.rect)
+        for text in all_text:
+            screen.blit(text.text, text.rect)
 
-    for sprite in all_sprites:
-        screen.blit(sprite.surf, sprite.rect)
-    for text in all_text:
-        screen.blit(text.text, text.rect)
-
-    player.update(pressed_keys)
-    enemy.Update()
+        player.update(pressed_keys)
+        enemy.Update()
 
 
-    for item in all_items:
-        item.Update(pressed_keys)
+        for item in all_items:
+            item.Update(pressed_keys)
 
-    pygame.draw.rect(screen, (0, 0, 0), pygame.Rect(SCREEN_WIDTH/ 2 - 110, SCREEN_HEIGHT - 75, 220, 50))
-    pygame.draw.rect(screen, (0,255,0), pygame.Rect(SCREEN_WIDTH/ 2 - 100, SCREEN_HEIGHT - 65, player.health * 2, 30))
+        pygame.draw.rect(screen, (0, 0, 0), pygame.Rect(SCREEN_WIDTH/ 2 - 110, SCREEN_HEIGHT - 75, 220, 50))
+        pygame.draw.rect(screen, (0,255,0), pygame.Rect(SCREEN_WIDTH/ 2 - 100, SCREEN_HEIGHT - 65, player.health * 2, 30))
 
-    pygame.display.flip()
+        pygame.display.flip()
 
-    clock.tick(30)
+        clock.tick(30)
