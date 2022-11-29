@@ -21,9 +21,9 @@ from pygame.locals import (
 pygame.init()
 
 PlayerData = mysql.connector.connect(
-  host="127.0.0.1",
-  user="root",
-  password="",
+  host="192.168.0.18",
+  user="Thomas",
+  password="123",
   database="2d rpg game db"
 )
 dbCursor = PlayerData.cursor()
