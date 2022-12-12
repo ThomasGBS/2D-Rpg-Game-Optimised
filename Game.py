@@ -21,9 +21,9 @@ from pygame.locals import (
 pygame.init()
 
 PlayerData = mysql.connector.connect(
-  host="192.168.0.18",
-  user="Thomas",
-  password="123",
+  host="localhost",
+  user="root",
+  password="",
   database="2d rpg game db"
 )
 dbCursor = PlayerData.cursor()
@@ -32,7 +32,7 @@ dbCursor = PlayerData.cursor()
 
 tiles = ['GrassBig', 'CobbelBig', 'CobbelBigBorder']
 
-maze = [
+tutoriallvl = [
     [1, 1, 1, 1, 1, 1, 1, 1,],
     [1, 0, 0, 0, 1, 0, 0, 1,],
     [1, 0, 0, 0, 1, 1, 0, 1,],
@@ -40,6 +40,26 @@ maze = [
     [1, 1, 1, 0, 1, 0, 0, 1,],
     [1, 1, 1, 0, 1, 0, 0, 1,],
     [1, 0, 0, 0, 0, 0, 0, 1,],
+    [1, 1, 1, 1, 1, 1, 1, 1]
+]
+level1 = [
+    [1, 1, 1, 1, 1, 1, 1, 1,],
+    [1, 0, 1, 0, 0, 0, 0, 1,],
+    [1, 0, 1, 0, 0, 0, 0, 1,],
+    [1, 0, 1, 0, 0, 0, 0, 1,],
+    [1, 0, 1, 0, 1, 0, 0, 1,],
+    [1, 0, 1, 1, 1, 0, 0, 1,],
+    [1, 0, 0, 0, 0, 0, 0, 1,],
+    [1, 1, 1, 1, 1, 1, 1, 1]
+]
+level2 = [
+    [1, 1, 1, 1, 1, 1, 1, 1,],
+    [1, 0, 0, 1, 1, 0, 0, 1,],
+    [1, 0, 0, 1, 1, 0, 0, 1,],
+    [1, 0, 0, 0, 0, 0, 0, 1,],
+    [1, 0, 0, 0, 0, 0, 0, 1,],
+    [1, 0, 0, 1, 1, 0, 0, 1,],
+    [1, 0, 0, 1, 1, 0, 0, 1,],
     [1, 1, 1, 1, 1, 1, 1, 1]
 ]
 
@@ -188,6 +208,7 @@ class Enemy(pygame.sprite.Sprite):
     def Update(self):
         global enemywait
         global immunity
+        global currentLvl
         x, y = self.rect.x, self.rect.y
         pX = player.rect.centerx - 20
         pY = player.rect.centery-20
@@ -196,11 +217,11 @@ class Enemy(pygame.sprite.Sprite):
 
         if dist < 200 and self.isAlive: 
             busy = False
-            for row in range(len(maze)):
-                for column in range(len(maze[row])):
+            for row in range(len(currentLvl)):
+                for column in range(len(currentLvl[row])):
                     tilex = column * TILE_SIZE + playerx
                     tiley = row * TILE_SIZE + playery
-                    tile = tiles[maze[row][column]]
+                    tile = tiles[currentLvl[row][column]]
                     if tile == "CobbelBig":
                         if self.rect.x + self.surf.get_width() - (x-pX) / 30 > tilex and self.rect.x < tilex - (x-pX) / 30 + TILE_SIZE and self.rect.y + self.surf.get_height() - (y-pY) / 30 > tiley and self.rect.y - (y-pY) / 30  < tiley + TILE_SIZE:
                             busy = True
@@ -224,7 +245,8 @@ class Enemy(pygame.sprite.Sprite):
                 immunity = time.time()
 
 class Item(pygame.sprite.Sprite):
-    def __init__(self, inv = False):
+    def __init__(self, inv = False, pos = None):
+        global currentLvl
         super(Item, self).__init__()
         self.die = False
 
@@ -234,22 +256,25 @@ class Item(pygame.sprite.Sprite):
         clones = 0
 
         myclass = f"{self.type}()"
+        if pos == None:
+            if not inv:
+                for row in range(len(currentLvl)):
+                    for column in range(len(currentLvl[row])):
+                        x = column * TILE_SIZE + playerx
+                        y = row * TILE_SIZE + playery
+                        tile = tiles[currentLvl[row][column]]
+                        if tile == "CobbelBig":
+                            if ranx + self.surf.get_width() > x and ranx < x + TILE_SIZE and rany + self.surf.get_height() > y and rany < y + TILE_SIZE:
+                                if clones == 0:
+                                    newitem = exec(myclass)
+                                    self.die = True
+                                    clones += 1
+                                    break
+                            
+            self.rect = self.surf.get_rect(center = (ranx, rany))
+        else:
+            self.rect = self.surf.get_rect(center = (pos))
 
-        if not inv:
-            for row in range(len(maze)):
-                for column in range(len(maze[row])):
-                    x = column * TILE_SIZE + playerx
-                    y = row * TILE_SIZE + playery
-                    tile = tiles[maze[row][column]]
-                    if tile == "CobbelBig":
-                        if ranx + self.surf.get_width() > x and ranx < x + TILE_SIZE and rany + self.surf.get_height() > y and rany < y + TILE_SIZE:
-                            if clones == 0:
-                                newitem = exec(myclass)
-                                self.die = True
-                                clones += 1
-                                break
-                        
-        self.rect = self.surf.get_rect(center = (ranx, rany))
         self.pickup = Text("E", 25, (0,0,0), (self.rect.centerx + 10, self.rect.centery - 30), self)
         self.inv = False
         self.hover = False
@@ -320,11 +345,11 @@ class Item(pygame.sprite.Sprite):
             
 
 class Sword(Item):
-    def __init__(self, inv = False):
+    def __init__(self, inv = False, pos = None):
         self.surf = pygame.image.load("2D-Rpg-Game-Optimised/sprites/Sword.png")
         self.surf.set_colorkey((255,255,255))
         self.type = "Sword"
-        super(Sword, self).__init__(inv)
+        super(Sword, self).__init__(inv,pos)
         self.pickup2 = Text("Equip", 25, (255,255,255), (self.rect.centerx + 10, self.rect.centery - 10), self)
         self.slash = None
         
@@ -366,11 +391,11 @@ class Sword(Item):
         super(Sword, self).Update(pressedKeys)
 
 class Apple(Item):
-    def __init__(self,inv = False):
+    def __init__(self,inv = False, pos = None):
         self.surf = pygame.image.load("2D-Rpg-Game-Optimised/sprites/Apple.png")
         self.surf.set_colorkey((255,255,255))
         self.type = "Apple"
-        super(Apple, self).__init__(inv)
+        super(Apple, self).__init__(inv,pos)
         self.pickup2 = Text("Eat", 25, (255,255,255), (self.rect.centerx + 10, self.rect.centery - 10), self)
         
     
@@ -400,6 +425,43 @@ class Apple(Item):
                     item.index -= 1
         super(Apple, self).Update(pressedKeys)
 
+class Goal(pygame.sprite.Sprite):
+    def __init__(self,inv = False, pos = None):
+        super(Goal, self).__init__()
+        self.surf = pygame.image.load("2D-Rpg-Game-Optimised/sprites/Goal.png")
+        self.surf.set_colorkey((255,255,255))
+        self.type = "Goal"
+        self.rect = self.surf.get_rect(center = (SCREEN_WIDTH + 100 + playerx, 200 + playery))
+        self.pickup = Text("E", 25, (0,0,0), (self.rect.centerx + 10, self.rect.centery - 30), self)
+    def Update(self, pressedKeys):
+        global currentLvl
+        global wait
+        global playerx
+        global playery
+        if collisionCheck(player, self) and not invcheck:
+            all_text.remove(self.pickup)
+            self.pickup = Text("E", 25, (0,0,0), (self.rect.centerx + 10, self.rect.centery - 30), self)
+            all_text.add(self.pickup)
+            if pressedKeys[K_e] and time.time() > wait + 0.2:
+                wait = time.time()
+                all_text.remove(self.pickup)
+                if currentLvl == tutoriallvl:
+                    currentLvl = level1
+                    for item in all_items:
+                        item.kill()
+                    try:
+                        tutorialSign.kill()
+                    except NameError:
+                        print("ops")
+                    goal.rect.x, goal.rect.y = 500,600
+                    playerx, playery = 90, 50
+                elif currentLvl == level1:
+                    currentLvl = level2
+        else:
+            all_text.remove(self.pickup)
+
+        
+
 class InventoryBack(pygame.sprite.Sprite):
     def __init__(self):
         super(InventoryBack, self).__init__()
@@ -418,22 +480,19 @@ class Text(pygame.sprite.Sprite):
 
 class Empty(pygame.sprite.Sprite):
     def __init__(self, x, y, img):
-        exec(img)#pygame.image.load(img).convert()
+        exec(img)
         self.rect = self.surf.get_rect(center = (x,y))
 
 def move(nr1,nr2):
     global playerx
     global playery
+    global currentLvl
     busy = False
-    # for tile in all_cobbel:
-    #     if player.rect.x + player.surf.get_width() + nr1 > tile.x and player.rect.x + nr1 < tile.x + TILE_SIZE and player.rect.y + player.surf.get_height() + nr2 > tile.y and player.rect.y + nr2 < tile.y + TILE_SIZE:#x + TILE_SIZE > player.rect.x and x < player.rect.x + player.surf.get_width() and y + TILE_SIZE + 5 > player.rect.y and y + 5 < player.rect.y + player.surf.get_height():
-    #         busy = True
-    #         print("ow")
-    for row in range(len(maze)):
-        for column in range(len(maze[row])):
+    for row in range(len(currentLvl)):
+        for column in range(len(currentLvl[row])):
             x = column * TILE_SIZE + playerx
             y = row * TILE_SIZE + playery
-            tile = tiles[maze[row][column]]
+            tile = tiles[currentLvl[row][column]]
             if tile == "CobbelBig":
                 if player.rect.x + player.surf.get_width() + nr1 > x and player.rect.x + nr1 < x + TILE_SIZE and player.rect.y + player.surf.get_height() + nr2 > y and player.rect.y + nr2 < y + TILE_SIZE:#x + TILE_SIZE > player.rect.x and x < player.rect.x + player.surf.get_width() and y + TILE_SIZE + 5 > player.rect.y and y + 5 < player.rect.y + player.surf.get_height():
                     busy = True
@@ -446,12 +505,12 @@ def move(nr1,nr2):
                 entity.rect.y -= nr2
 
 
-def draw():
-    for row in range(len(maze)):
-        for column in range(len(maze[row])):
+def draw(level):
+    for row in range(len(level)):
+        for column in range(len(level[row])):
             x = column * TILE_SIZE + playerx
             y = row * TILE_SIZE + playery
-            tile = tiles[maze[row][column]]
+            tile = tiles[level[row][column]]
             # tile = pygame.sprite.Sprite()
             # tile.tiles = tiles[maze[row][column]]
             # tile.num = ((row + 1) * 8) - (8-(column + 1))
@@ -516,6 +575,7 @@ all_text = pygame.sprite.Group()
 all_items = pygame.sprite.Group()
 all_sprites = pygame.sprite.Group()
 menu_buttons = pygame.sprite.Group()
+Levels = pygame.sprite.Group()
 
 all_sprites.add(player)
 
@@ -541,25 +601,51 @@ if len(nyadresser) != 0 and IPAddr in nyadresser:
     
     player.health = oldplayerdata[0][1]
     oldinv = list(oldplayerdata[0][4].replace("[", "").replace("]", "").replace("(", "").replace(")", "").replace("'", "").split(","))
-    for item in oldinv:
-        exec(f"newitem = {item}(True)")
-        newitem.kill()
-        player.inventory.append(newitem)
-        newitem.index = len(player.inventory) - 1
-        newitem.inv = True
+    if oldinv != ['']:
+        for item in oldinv:
+            exec(f"newitem = {item}(True)")
+            newitem.kill()
+            player.inventory.append(newitem)
+            newitem.index = len(player.inventory) - 1
+            newitem.inv = True
         
-else:
+else:   
     playerx, playery = -20, 0
 
-enemy = Enemy()
-
-all_sprites.add(enemy)
-
 menucheck = True
+lvlclicked = False
 
-start = Text("Start", 100, (0,0,0), (SCREEN_WIDTH/2 - 100, SCREEN_HEIGHT/2 - 80))
+if len(nyadresser) != 0 and IPAddr in nyadresser:
+    dbCursor.execute(f"SELECT `currentlvl` FROM playerdata WHERE Ip = '{IPAddr}'")
+    currentLvl = dbCursor.fetchall()
+    currentLvl = str(currentLvl).replace("[", "").replace("]", "").replace("(", "").replace(")", "").replace("'", "").replace(",", "")
+    if currentLvl == "tutoriallvl":
+        currentLvl = tutoriallvl
+
+    elif currentLvl == "level1":
+        currentLvl = level1
+
+    elif currentLvl == "level2":
+        currentLvl = level2
+else:
+    currentLvl = tutoriallvl
+    print("tutorial")
+
+start = Text("Start", 100, (0,0,0), (SCREEN_WIDTH/2 - 100, SCREEN_HEIGHT/2 - 90))
+lvlbtn = Text("Level", 100, (0,0,0), (SCREEN_WIDTH/2 - 115, SCREEN_HEIGHT/2))
+
+tutorial = Text("Tutorial", 40, (0,0,0), (SCREEN_WIDTH/2 - 80, SCREEN_HEIGHT/2 - 120))
+lvl1 = Text("Level 1", 40, (0,0,0), (SCREEN_WIDTH/2 - 80, SCREEN_HEIGHT/2 - 70))
+lvl2 = Text("Level 2", 40, (0,0,0), (SCREEN_WIDTH/2 - 80, SCREEN_HEIGHT/2 - 20))
+back = Text("Back", 40, (0,0,0), (80, 60))
+
+Levels.add(tutorial)
+Levels.add(lvl1)
+Levels.add(lvl2)
+Levels.add(back)
 
 menu_buttons.add(start)
+menu_buttons.add(lvlbtn)
 
 while running:
     if menucheck == True:
@@ -575,12 +661,80 @@ while running:
 
         screen.fill((40, 40, 240))
 
-        for text in menu_buttons:
-            screen.blit(text.text, text.rect)
+        if not lvlclicked:
+            for text in menu_buttons:
+                screen.blit(text.text, text.rect)
+        else:
+            for text in Levels:
+                screen.blit(text.text, text.rect)
 
-        if textHover(start) and pygame.mouse.get_pressed()[0]:
+        if textHover(start) and pygame.mouse.get_pressed()[0] and lvlclicked == False:
             menucheck = False
-        
+            enemy = Enemy()
+            if currentLvl == tutoriallvl:
+                tutorialSign = pygame.sprite.Sprite()
+                tutorialSign.surf = pygame.image.load("2D-Rpg-Game-Optimised/sprites/Tutorial.png")
+                tutorialSign.surf.set_colorkey((255,255,255))
+                tutorialSign.rect = tutorialSign.surf.get_rect(center = (SCREEN_WIDTH - 225, 250))
+                tutorialSign.rect.x += playerx
+                tutorialSign.rect.y += playery
+                all_sprites.add(tutorialSign)
+                goal = Goal((-750 - playerx, -200 - playery))
+                
+            elif currentLvl == level1:
+                goal = Goal((500, 600))
+            elif currentLvl == level2:
+                goal = Goal((500, 600))
+            else:
+                print(currentLvl)
+            all_sprites.add(enemy)
+            all_sprites.add(goal)
+            all_sprites.add(player)
+
+        if textHover(lvlbtn) and pygame.mouse.get_pressed()[0] and lvlclicked == False:
+            lvlclicked = True
+        if textHover(back) and pygame.mouse.get_pressed()[0]  and lvlclicked == True:
+            lvlclicked = False
+        if textHover(tutorial) and pygame.mouse.get_pressed()[0]  and lvlclicked == True:
+            playerx, playery = 100, 0
+            player.health = 100
+            enemy = Enemy()
+            goal = Goal((-750 - playerx, -200 - playery))
+            tutorialSign = pygame.sprite.Sprite()
+            tutorialSign.surf = pygame.image.load("2D-Rpg-Game-Optimised/sprites/Tutorial.png")
+            tutorialSign.surf.set_colorkey((255,255,255))
+            tutorialSign.rect = tutorialSign.surf.get_rect(center = (SCREEN_WIDTH - 110, 250))
+            all_sprites.add(enemy)
+            all_sprites.add(goal)
+            all_sprites.add(tutorialSign)
+            all_sprites.add(player)
+
+            menucheck = False
+            currentLvl = tutoriallvl
+        if textHover(lvl1) and pygame.mouse.get_pressed()[0]  and lvlclicked == True:
+            playerx, playery = 90, 50
+            player.health = 100
+            enemy = Enemy()
+            goal = Goal((0,0))
+            all_sprites.add(enemy)
+            all_sprites.add(goal)
+            all_sprites.add(player)
+
+            menucheck = False
+            currentLvl = level1
+
+        if textHover(lvl2) and pygame.mouse.get_pressed()[0]  and lvlclicked == True:
+            playerx, playery = -500, -500
+            player.health = 100
+            enemy = Enemy()
+            goal = Goal((0,0))
+            all_sprites.add(enemy)
+            all_sprites.add(goal)
+            all_sprites.add(player)
+
+            menucheck = False
+            currentLvl = level2
+
         pygame.display.flip()
 
         clock.tick(30)
@@ -594,13 +748,21 @@ while running:
                     newinv = []
                     for item in player.inventory:
                         newinv.append(item.type)
+                    if currentLvl == tutoriallvl:
+                        savedlvl = "tutoriallvl"
+                    elif currentLvl == level1:
+                        savedlvl = "level1"
+                    elif currentLvl == level2:
+                        savedlvl = "level2"
                     if len(nyadresser) != 0 and IPAddr in nyadresser:
                     
-                        dbCursor.execute(f'UPDATE `playerdata` SET `Health`="{player.health}",`X`="{playerx}",`Y`="{playery}",`Inventory`="{newinv}" WHERE `Ip` = "{IPAddr}"')
+                        dbCursor.execute(f'UPDATE `playerdata` SET `Health`="{player.health}",`X`="{playerx}",`Y`="{playery}",`Inventory`="{newinv}",`currentlvl`="{savedlvl}" WHERE `Ip` = "{IPAddr}"')
                     else:
-                        dbCursor.execute(f'INSERT INTO playerdata(Ip,Health,X,Y,Inventory) VALUES("{IPAddr}", {player.health},{playerx},{playery},"{newinv}")')
+                        dbCursor.execute(f'INSERT INTO playerdata(Ip,Health,X,Y,Inventory,currentlvl) VALUES("{IPAddr}", {player.health},{playerx},{playery},"{newinv}","{savedlvl}")')
                     PlayerData.commit()
-                    running = False
+                    menucheck = True 
+                    for sprite in all_sprites:
+                        sprite.kill()
                 elif event.key == K_i:
                     player.openInventory()
 
@@ -608,27 +770,32 @@ while running:
                 newinv = []
                 for item in player.inventory:
                     newinv.append(item.type)
+                if currentLvl == tutoriallvl:
+                    savedlvl = "tutoriallvl"
+                elif currentLvl == level1:
+                    savedlvl = "level1"
+                elif currentLvl == level2:
+                    savedlvl = "level2"
                 if len(nyadresser) != 0 and IPAddr in nyadresser:
                     
-                    dbCursor.execute(f'UPDATE `playerdata` SET `Health`="{player.health}",`X`="{playerx}",`Y`="{playery}",`Inventory`="{newinv}" WHERE `Ip` = "{IPAddr}"')
+                    dbCursor.execute(f'UPDATE `playerdata` SET `Health`="{player.health}",`X`="{playerx}",`Y`="{playery}",`Inventory`="{newinv}",`currentlvl`="{savedlvl}" WHERE `Ip` = "{IPAddr}"')
                 else:
-                    dbCursor.execute(f'INSERT INTO playerdata(Ip,Health,X,Y,Inventory) VALUES("{IPAddr}", {player.health},{playerx},{playery},"{newinv}")')
+                    dbCursor.execute(f'INSERT INTO playerdata(Ip,Health,X,Y,Inventory,currentlvl) VALUES("{IPAddr}", {player.health},{playerx},{playery},"{newinv}","{savedlvl}")')
                 PlayerData.commit()
                 running = False
             
             elif event.type == ADDITEM and not invcheck:
                 if len(all_items) < 5:
-                    ran = random.randint(1,2)
-                    if ran == 1:
+                    ran = random.randint(1,10)
+                    if ran > 6:
                         newitem = Sword()
                     else:
                         newitem = Apple()
-                    # all_items.add(newitem)
-                    # all_sprites.add(newitem)
+
             
         screen.fill((0, 0, 0))
 
-        draw()
+        draw(currentLvl)
 
         pressed_keys = pygame.key.get_pressed()
 
@@ -639,6 +806,7 @@ while running:
 
         player.update(pressed_keys)
         enemy.Update()
+        goal.Update(pressed_keys)
 
 
         for item in all_items:
