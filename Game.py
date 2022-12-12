@@ -17,21 +17,23 @@ from pygame.locals import (
     KEYDOWN,
     QUIT,
 )
-
+#pygame.init() er for åstarte pygame sånn at du kan begynne å kjøre pygame koden
 pygame.init()
 
+#her kobler jeg til my sql databasen min
 PlayerData = mysql.connector.connect(
   host="localhost",
   user="root",
   password="",
   database="2d rpg game db"
 )
+#her lager jeg cursor som kan redigere og hante ding fra databasen
 dbCursor = PlayerData.cursor()
 
-
-
+#dette er alle tilsene i levlene
 tiles = ['GrassBig', 'CobbelBig', 'CobbelBigBorder']
 
+#her lager jeg alle levlene med array
 tutoriallvl = [
     [1, 1, 1, 1, 1, 1, 1, 1,],
     [1, 0, 0, 0, 1, 0, 0, 1,],
@@ -67,6 +69,7 @@ TILE_SIZE = 128
 SCREEN_WIDTH = TILE_SIZE * 4 + 100
 SCREEN_HEIGHT = TILE_SIZE * 4 + 50
 
+#dette er player classen. player classen inheriter fra pygame.sprite.Sprite() classen
 class Player(pygame.sprite.Sprite):
     def __init__(self):
         super(Player, self).__init__()
@@ -80,7 +83,7 @@ class Player(pygame.sprite.Sprite):
         self.dir = "down"
         self.health = 100
 
-
+    #dette er update funksjonen til player klassen som blir callet hver frame af spiller.
     def update(self, pressed_keys):
         global wait
         global running
@@ -90,6 +93,7 @@ class Player(pygame.sprite.Sprite):
             time.sleep(1)
             running = False
         sworddir = ""
+        #her håndterer jeg hviken rettning spilleren ser
         if self.hand != None:
             if self.dir == "down" and not self.attacking:
                 sworddir = "self.hand.surf = pygame.transform.flip(pygame.image.load('2D-Rpg-Game-Optimised/sprites/Sword.png'), True, True).convert()"
@@ -114,6 +118,8 @@ class Player(pygame.sprite.Sprite):
                 
             if not self.hand in all_sprites:
                 all_sprites.add(self.hand)
+            
+            #dette er hvor jeg håndterer spiller attacks
             if pygame.mouse.get_pressed()[0] and not invcheck and self.hand.rotation == 0 and time.time() > wait + 0.5:
                 wait = time.time()
                 if self.dir == "right" or self.dir == "up":
@@ -141,7 +147,8 @@ class Player(pygame.sprite.Sprite):
                 
                 self.hand.slash.surf.set_colorkey((0,0,0))
                 screen.blit(pygame.transform.flip(self.hand.slash.surf, True, False), self.hand.slash.rect)
-                
+        
+        #her håndterer jeg spiller input
         if not invcheck:
             if pressed_keys[K_UP]:
                 self.surf = pygame.image.load("2D-Rpg-Game-Optimised/sprites/PlayerUp.png").convert()
@@ -171,6 +178,7 @@ class Player(pygame.sprite.Sprite):
                 move(5,0)
                 self.dir = "right"
 
+    #dette er funksjonen får å åpne inventoryen til spilleren.
     def openInventory(self):
         global invcheck
         if not invcheck:
@@ -197,6 +205,7 @@ class Player(pygame.sprite.Sprite):
 
             invcheck = False
 
+#dette er enemy classen
 class Enemy(pygame.sprite.Sprite):
     def __init__(self):
         super(Enemy, self).__init__()
@@ -205,10 +214,12 @@ class Enemy(pygame.sprite.Sprite):
         self.rect = self.surf.get_rect(center = (SCREEN_WIDTH + 200 + playerx, 200 + playery))
         self.isAlive = True
 
+    #dette er update funksjonen til enemy classen som calles hver frame av spillet
     def Update(self):
         global enemywait
         global immunity
         global currentLvl
+        #her regner jeg ut avstanden fra spilleren og fienden.
         x, y = self.rect.x, self.rect.y
         pX = player.rect.centerx - 20
         pY = player.rect.centery-20
@@ -244,6 +255,7 @@ class Enemy(pygame.sprite.Sprite):
                 player.health -= 20
                 immunity = time.time()
 
+#dette er item classen som alle items for eksempel apple kommer til å inherite funksjoner fra.
 class Item(pygame.sprite.Sprite):
     def __init__(self, inv = False, pos = None):
         global currentLvl
@@ -256,6 +268,8 @@ class Item(pygame.sprite.Sprite):
         clones = 0
 
         myclass = f"{self.type}()"
+
+        #her legger jeg objekte på et tilfeldig sted på levelet sånn at den ikke kolliderer med vegger
         if pos == None:
             if not inv:
                 for row in range(len(currentLvl)):
