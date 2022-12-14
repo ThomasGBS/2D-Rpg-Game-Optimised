@@ -439,6 +439,11 @@ class Apple(Item):
                     item.index -= 1
         super(Apple, self).Update(pressedKeys)
 
+greenapple = pygame.sprite.Sprite()
+greenapple.surf = pygame.image.load("2D-Rpg-Game-Optimised/sprites/Apple-1.png.png")
+greenapple.rect = greenapple.surf.get_rect(center=(300,300))
+
+
 class Goal(pygame.sprite.Sprite):
     def __init__(self,inv = False, pos = None):
         super(Goal, self).__init__()
@@ -592,6 +597,7 @@ menu_buttons = pygame.sprite.Group()
 Levels = pygame.sprite.Group()
 
 all_sprites.add(player)
+all_sprites.add(greenapple)
 
 wait = time.time()
 enemywait = time.time() 
